@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Casual Block Builder Pro</title>
+    <!-- html2canvas for PNG export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        :root {
+            --grid-size: 40px;
+            --bg-color: #f0f2f5;
+            --sidebar-width: 340px;
+            --primary-color: #4f46e5;
+            --primary-hover: #4338ca;
+            --danger-color: #ef4444;
+            --text-main: #1f2937;
+            --text-muted: #6b7280;
+            --card-bg: #ffffff;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+            user-select: none;
+        }
+
+        body {
+            height: 100vh;
+            width: 100vw;
+            background-color: var(--bg-color);
+            overflow: hidden;
+            color: var(--text-main);
+        }
+
+        .hidden { display: none !important; }
+
+        /* --- MENU SCREEN --- */
+        #menu-screen {
+            height: 100%;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: radial-gradient(circle at top left, #4f46e5, #7c3aed);
+            position: absolute;
+            top: 0; left: 0; z-index: 100;
+        }
+
+        .title {
+            color: white;
+            font-size: 5rem;
+            margin-bottom: 40px;
+            font-weight: 900;
+            letter-spacing: -2px;
+            text-align: center;
+            line-height: 0.9;
+        }
+
+        .menu-btn {
+            padding: 20px 56px;
+            margin: 12px;
+            font-size: 1.4rem;
+            border: none;
+            background: white;
+            color: var(--primary-color);
+            border-radius: 100px;
+            cursor: pointer;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            width: 300px;
+            font-weight: 700;
+        }
+
+        .menu-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.2);
+        }
+
+        /* --- GAME SCREEN --- */
+        #game-screen {
+            display: flex;
+            height: 100%;
+            width: 100%;
+        }
+
+        /* Draggable Sidebar Container */
+        #sidebar-container {
+            position: relative;
+            height: 100%;
+            display: flex;
+            z-index: 10;
+        }
+
+        #sidebar {
+            width: var(--sidebar-width);
+            min-width: 280px;
+            max-width: 600px;
+            background: var(--card-bg);
+            padding: 32px 24px;
+            box-shadow: 4px 0 15px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            gap: 28px;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        /* Resize Handle */
+        #resizer {
+            width: 8px;
+            height: 100%;
+            cursor: col-resize;
+            background: transparent;
+            transition: background 0.2s;
+            position: absolute;
+            right: 0;
+            top: 0;
+            z-index: 20;
+        }
+
+        #resizer:hover, #resizer.dragging {
+            background: rgba(79, 70, 229, 0.2);
+            border-right: 2px solid var(--primary-color);
+        }
+
+        .sidebar-header h2 {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--text-main);
+            margin-bottom: 6px;
+        }
+
+        .sidebar-header p {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .control-group label {
+            display: block;
+            margin-bottom: 12px;
+            font-weight: 700;
+            color: var(--text-main);
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .color-picker-container {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .color-preview {
+            width: 60px;
+            height: 60px;
+            border-radius: 16px;
+            border: 3px solid #e5e7eb;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        input[type="color"] {
+            position: absolute;
+            top: -10px; left: -10px;
+            width: 160%; height: 160%;
+            cursor: pointer;
+            border: none;
+        }
+
+        .shape-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .shape-btn {
+            padding: 16px;
+            background: #f9fafb;
+            border: 2px solid #f3f4f6;
+            border-radius: 16px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: all 0.2s;
+            min-height: 90px;
+        }
+
+        .shape-btn.active {
+            border-color: var(--primary-color);
+            background: #eef2ff;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.1);
+        }
+
+        .shape-btn span {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text-main);
+            text-align: center;
+        }
+
+        .rotate-btn {
+            margin-top: 10px;
+            width: 100%;
+            padding: 14px;
+            border-radius: 12px;
+            border: 2px solid #e5e7eb;
+            background: white;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: all 0.2s;
+        }
+
+        .upload-area {
+            border: 2px dashed #d1d5db;
+            border-radius: 16px;
+            padding: 16px;
+            text-align: center;
+            cursor: pointer;
+            flex: 1;
+            position: relative;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .upload-area input { position: absolute; opacity: 0; width: 100%; height: 100%; top:0; left:0; cursor: pointer; }
+
+        .mode-tabs {
+            display: flex;
+            background: #f3f4f6;
+            padding: 6px;
+            border-radius: 14px;
+        }
+
+        .mode-tabs button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            background: transparent;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 1rem;
+            color: var(--text-muted);
+        }
+
+        .mode-tabs button.active {
+            background: white;
+            color: var(--primary-color);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        .action-list {
+            margin-top: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding-bottom: 20px;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 16px;
+            border-radius: 16px;
+            font-weight: 800;
+            font-size: 1.1rem;
+            cursor: pointer;
+        }
+
+        .btn-outline {
+            background: white;
+            border: 2px solid #e5e7eb;
+            color: var(--text-main);
+            padding: 14px;
+            border-radius: 16px;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+
+        /* --- GAME AREA --- */
+        #game-area {
+            flex-grow: 1;
+            position: relative;
+            overflow: auto;
+            background-color: #cbd5e1;
+            cursor: crosshair;
+        }
+
+        #grid-board {
+            width: 4000px;
+            height: 4000px;
+            position: relative;
+            background-color: #f8fafc;
+            background-image: 
+                linear-gradient(to right, rgba(0, 0, 0, 0.04) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(0, 0, 0, 0.04) 1px, transparent 1px);
+            background-size: var(--grid-size) var(--grid-size);
+        }
+
+        .block {
+            position: absolute;
+            box-sizing: border-box;
+            border-top: 5px solid rgba(255,255,255,0.4);
+            border-left: 5px solid rgba(255,255,255,0.2);
+            border-bottom: 5px solid rgba(0,0,0,0.15);
+            border-right: 5px solid rgba(0,0,0,0.15);
+            box-shadow: 2px 4px 8px rgba(0,0,0,0.1);
+            background-image: 
+                radial-gradient(circle at center, rgba(0,0,0,0.04) 20%, transparent 22%),
+                radial-gradient(circle at center, rgba(255,255,255,0.2) 10%, transparent 12%);
+            background-size: var(--grid-size) var(--grid-size);
+            pointer-events: none;
+            border-radius: 2px;
+        }
+
+        .block.has-texture {
+            background-size: cover !important;
+            background-repeat: no-repeat !important;
+            background-image: none !important;
+            border: 1px solid rgba(0,0,0,0.15);
+        }
+
+        .ghost-block {
+            position: absolute;
+            background-color: rgba(79, 70, 229, 0.15);
+            pointer-events: none;
+            border: 3px dashed var(--primary-color);
+            z-index: 1000;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="menu-screen">
+        <h1 class="title">BLOCK<br>BUILDER</h1>
+        <button id="play-btn" class="menu-btn">Start Building</button>
+        <button id="quit-btn" class="menu-btn" style="background: rgba(255,255,255,0.1); color: white; border: 2px solid white;">Exit</button>
+    </div>
+
+    <div id="game-screen" class="hidden">
+        <div id="sidebar-container">
+            <aside id="sidebar">
+                <div class="sidebar-header">
+                    <h2>Workshop</h2>
+                    <p>Select your tools</p>
+                </div>
+
+                <div class="control-group">
+                    <label>Mode</label>
+                    <div class="mode-tabs">
+                        <button id="mode-build" class="active">Build</button>
+                        <button id="mode-erase">Erase</button>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label>Shape</label>
+                    <div class="shape-grid">
+                        <button class="shape-btn active" data-w="1" data-h="1">
+                            <div style="width: 20px; height: 20px; background: #94a3b8; border-radius: 4px; border: 1px solid #475569;"></div>
+                            <span>1x1 Square</span>
+                        </button>
+                        <button class="shape-btn" data-w="2" data-h="1">
+                            <div style="width: 40px; height: 20px; background: #94a3b8; border-radius: 4px; border: 1px solid #475569;"></div>
+                            <span>2x1 Plank</span>
+                        </button>
+                        <button class="shape-btn" data-w="2" data-h="2">
+                            <div style="width: 40px; height: 40px; background: #94a3b8; border-radius: 4px; border: 1px solid #475569;"></div>
+                            <span>2x2 Large</span>
+                        </button>
+                        <button class="shape-btn" data-w="4" data-h="1">
+                            <div style="width: 60px; height: 15px; background: #94a3b8; border-radius: 4px; border: 1px solid #475569;"></div>
+                            <span>4x1 Beam</span>
+                        </button>
+                    </div>
+                    <button id="rotate-btn" class="rotate-btn">🔄 Rotate Shape</button>
+                </div>
+
+                <div class="control-group">
+                    <label>Color & Texture</label>
+                    <div class="color-picker-container">
+                        <div class="color-preview" id="color-preview-box">
+                            <input type="color" id="color-picker" value="#4f46e5">
+                        </div>
+                        <div class="upload-area">
+                            <span class="upload-text" id="upload-status">Add Image</span>
+                            <input type="file" id="texture-input" accept="image/*">
+                        </div>
+                    </div>
+                    <div id="remove-texture" class="hidden" style="color:var(--danger-color); font-size: 0.85rem; margin-top: 8px; cursor: pointer; text-align: center; text-decoration: underline; font-weight: 600;">Remove texture</div>
+                </div>
+
+                <div class="action-list">
+                    <button id="save-png-btn" class="btn-primary">Export creation (.png)</button>
+                    <button id="center-btn" class="btn-outline">Center View</button>
+                    <button id="clear-btn" class="btn-outline" style="color: var(--danger-color);">Clear Board</button>
+                    <button id="back-btn" class="btn-outline">Exit to Menu</button>
+                </div>
+            </aside>
+            <div id="resizer"></div>
+        </div>
+
+        <main id="game-area">
+            <div id="grid-board">
+                <div id="ghost" class="ghost-block hidden"></div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const GRID_SIZE = 40;
+        let isBuildMode = true;
+        let isMouseDown = false;
+        let cellOccupancy = {}; 
+        let placedBlocksData = {}; 
+        let currentShape = { w: 1, h: 1 };
+        let currentTexture = null;
+
+        const gridBoard = document.getElementById('grid-board');
+        const gameArea = document.getElementById('game-area');
+        const ghost = document.getElementById('ghost');
+        const colorPicker = document.getElementById('color-picker');
+        const textureInput = document.getElementById('texture-input');
+        const uploadStatus = document.getElementById('upload-status');
+        const removeTextureBtn = document.getElementById('remove-texture');
+        
+        // Sidebar Resizing Logic
+        const sidebar = document.getElementById('sidebar');
+        const resizer = document.getElementById('resizer');
+        let isResizing = false;
+
+        resizer.addEventListener('mousedown', (e) => {
+            isResizing = true;
+            resizer.classList.add('dragging');
+            document.body.style.cursor = 'col-resize';
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+            let newWidth = e.clientX;
+            // Bounds check
+            if (newWidth < 280) newWidth = 280;
+            if (newWidth > 600) newWidth = 600;
+            sidebar.style.width = newWidth + 'px';
+        });
+
+        window.addEventListener('mouseup', () => {
+            if (isResizing) {
+                isResizing = false;
+                resizer.classList.remove('dragging');
+                document.body.style.cursor = 'default';
+            }
+        });
+
+        function centerBoard() {
+            gameArea.scrollLeft = (gridBoard.offsetWidth - gameArea.offsetWidth) / 2;
+            gameArea.scrollTop = (gridBoard.offsetHeight - gameArea.offsetHeight) / 2;
+        }
+
+        window.onload = () => {
+            centerBoard();
+            updateGhost();
+        };
+
+        document.getElementById('play-btn').onclick = () => {
+            document.getElementById('menu-screen').classList.add('hidden');
+            document.getElementById('game-screen').classList.remove('hidden');
+            centerBoard();
+        };
+
+        document.getElementById('center-btn').onclick = centerBoard;
+
+        document.getElementById('back-btn').onclick = () => {
+            document.getElementById('game-screen').classList.add('hidden');
+            document.getElementById('menu-screen').classList.remove('hidden');
+        };
+
+        document.getElementById('quit-btn').onclick = () => {
+            if(confirm("Exit building?")) window.location.reload();
+        };
+
+        document.querySelectorAll('.shape-btn').forEach(btn => {
+            btn.onclick = () => {
+                document.querySelectorAll('.shape-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentShape.w = parseInt(btn.dataset.w);
+                currentShape.h = parseInt(btn.dataset.h);
+                updateGhost();
+            };
+        });
+
+        document.getElementById('rotate-btn').onclick = () => {
+            const temp = currentShape.w;
+            currentShape.w = currentShape.h;
+            currentShape.h = temp;
+            updateGhost();
+        };
+
+        function updateGhost() {
+            ghost.style.width = (currentShape.w * GRID_SIZE) + 'px';
+            ghost.style.height = (currentShape.h * GRID_SIZE) + 'px';
+        }
+
+        textureInput.onchange = (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                currentTexture = ev.target.result;
+                uploadStatus.innerText = "Loaded!";
+                removeTextureBtn.classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+        };
+
+        removeTextureBtn.onclick = () => {
+            currentTexture = null;
+            uploadStatus.innerText = "Add Image";
+            removeTextureBtn.classList.add('hidden');
+            textureInput.value = "";
+        };
+
+        document.getElementById('mode-build').onclick = function() {
+            isBuildMode = true;
+            this.classList.add('active');
+            document.getElementById('mode-erase').classList.remove('active');
+            ghost.style.borderColor = 'var(--primary-color)';
+        };
+
+        document.getElementById('mode-erase').onclick = function() {
+            isBuildMode = false;
+            this.classList.add('active');
+            document.getElementById('mode-build').classList.remove('active');
+            ghost.style.borderColor = 'var(--danger-color)';
+        };
+
+        function getCoords(e) {
+            const rect = gridBoard.getBoundingClientRect();
+            const x = Math.floor((e.clientX - rect.left) / GRID_SIZE) * GRID_SIZE;
+            const y = Math.floor((e.clientY - rect.top) / GRID_SIZE) * GRID_SIZE;
+            return { x, y };
+        }
+
+        gridBoard.onmousemove = (e) => {
+            const { x, y } = getCoords(e);
+            ghost.classList.remove('hidden');
+            ghost.style.left = x + 'px';
+            ghost.style.top = y + 'px';
+            if (isMouseDown) act(x, y);
+        };
+
+        gridBoard.onmouseleave = () => ghost.classList.add('hidden');
+
+        gridBoard.onmousedown = (e) => { 
+            if(e.button === 0 && !isResizing) { 
+                isMouseDown = true; 
+                const { x, y } = getCoords(e); 
+                act(x, y); 
+            } 
+        };
+        
+        window.onmouseup = () => isMouseDown = false;
+
+        function act(x, y) {
+            const cells = [];
+            for(let i=0; i<currentShape.w; i++) {
+                for(let j=0; j<currentShape.h; j++) {
+                    cells.push(`${x + i*GRID_SIZE}_${y + j*GRID_SIZE}`);
+                }
+            }
+
+            if (isBuildMode) {
+                if (cells.some(c => cellOccupancy[c])) return;
+                const id = 'b' + Date.now() + Math.random().toString(36).slice(2,5);
+                const b = document.createElement('div');
+                b.className = 'block' + (currentTexture ? ' has-texture' : '');
+                b.id = id;
+                b.style.left = x + 'px';
+                b.style.top = y + 'px';
+                b.style.width = (currentShape.w * GRID_SIZE) + 'px';
+                b.style.height = (currentShape.h * GRID_SIZE) + 'px';
+                
+                if (currentTexture) {
+                    b.style.backgroundImage = `url(${currentTexture})`;
+                    b.style.backgroundColor = 'transparent';
+                } else {
+                    b.style.backgroundColor = colorPicker.value;
+                }
+                
+                gridBoard.appendChild(b);
+                placedBlocksData[id] = { x, y, w: currentShape.w, h: currentShape.h };
+                cells.forEach(c => cellOccupancy[c] = id);
+            } else {
+                const ids = new Set(cells.map(c => cellOccupancy[c]).filter(Boolean));
+                ids.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.remove();
+                    const data = placedBlocksData[id];
+                    if (data) {
+                        for(let i=0; i<data.w; i++) {
+                            for(let j=0; j<data.h; j++) {
+                                delete cellOccupancy[`${data.x + i*GRID_SIZE}_${data.y + j*GRID_SIZE}`];
+                            }
+                        }
+                        delete placedBlocksData[id];
+                    }
+                });
+            }
+        }
+
+        document.getElementById('clear-btn').onclick = () => {
+            if (confirm("Clear all blocks?")) {
+                document.querySelectorAll('.block').forEach(b => b.remove());
+                cellOccupancy = {}; 
+                placedBlocksData = {};
+            }
+        };
+
+        document.getElementById('save-png-btn').onclick = async () => {
+            const blocks = Object.values(placedBlocksData);
+            if (!blocks.length) return alert("Nothing to export!");
+            const btn = document.getElementById('save-png-btn');
+            btn.innerText = "Exporting...";
+            try {
+                const minX = Math.min(...blocks.map(b => b.x));
+                const minY = Math.min(...blocks.map(b => b.y));
+                const maxX = Math.max(...blocks.map(b => b.x + b.w * GRID_SIZE));
+                const maxY = Math.max(...blocks.map(b => b.y + b.h * GRID_SIZE));
+                const pad = 60;
+                const canvas = await html2canvas(gridBoard, {
+                    x: minX - pad,
+                    y: minY - pad,
+                    width: (maxX - minX) + pad * 2,
+                    height: (maxY - minY) + pad * 2,
+                    backgroundColor: '#f8fafc',
+                    scale: 2
+                });
+                const link = document.createElement('a');
+                link.download = `creation.png`;
+                link.href = canvas.toDataURL("image/png");
+                link.click();
+            } catch (e) { alert("Export failed"); }
+            btn.innerText = "Export creation (.png)";
+        };
+    </script>
+</body>
+</html>
